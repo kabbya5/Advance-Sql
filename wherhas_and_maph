@@ -1,0 +1,101 @@
+$student_dues =InvoiceItem::with('student')
+            ->latest()
+            ->get()
+            ->groupBy(function ($items) {
+                return $items->student_id; // Group by date
+            })
+            ->map(function ($items) {
+                return [
+                    'date' => $items->max('date'),
+                    'total_amount' => $items->sum('due_amount'),
+                    'name' => $items[0]->student->full_name,
+                    'class' =>$items[0]->class->name,
+                    'section' => $items[0]->sectionName->name,
+                    'photo' => $items[0]->student->photo,
+            ];
+        })->take(6);
+
+
+$head_collections = ReceiptItem::with('headName')->select(
+            DB::raw('MONTH(date) as month'),
+            DB::raw('YEAR(date) as year'),
+            DB::raw('SUM(amount) as total_amount'),
+            DB::raw('MAX(ac_head_id) as head'),
+            DB::raw('MAX(date) as date'),
+        )
+        ->whereYear('date', $year)
+        ->whereMonth('date',date('m'))
+        ->groupBy(DB::raw('YEAR(date)'),  DB::raw('ac_head_id'), DB::raw('MONTH(date)'),DB::raw('DAY(date)'))
+        ->orderBy('date')
+        ->whereBetween('date',[$startOfWeek, $endOfWeek])
+        ->get()
+        ->map(function($item){
+            $day =  new DateTime($item->date);
+            return [
+                'head_name' => AccountHead::find($item->head)->fld_ac_head,
+                'total_amount' => $item->total_amount,
+                'day' => $day->format('D'),
+            ];
+        });
+
+ $class_collections = StudentClass::whereHas('receive_items', function ($query) use ($month, $year) {
+            $query->whereMonth('created_at', $month)->whereYear('created_at', $year);
+        })
+        ->with(['receive_items' => function ($query) use ($month, $year) {
+            $query->select('class_id', DB::raw('SUM(amount) as total_amount'))
+                ->whereMonth('created_at', $month)
+                ->whereYear('created_at', $year)
+                ->groupBy('class_id');
+        }])
+        ->get();
+
+
+ $student_class_attendance = StudentClass::whereHas('attendances',function($q){
+            $q->where('date',date('Y-m-d'));
+        })->with(['attendances' => function($q){
+            $q->where('date',date('Y-m-d'))->where('status',1);
+        }])->with(['students' => function($q){
+            $q->where('education_year',date('Y'));
+        }])->get()
+        ->map(function($class){
+            return[
+                'class' => $class->name,
+                'total_students' => $class->students->count(),
+                'percent' => $class->attendances->count() * 100 / $class->students->count(),
+            ];
+
+        });
+
+      $expense_party_wise = JournalRecord::select(
+            DB::raw('SUM(total_amount) as total_amount'),
+            DB::raw('MAX(party_info_id) as party_id'),
+            DB::raw('MAX(journal_date) as date'),
+        )->groupBy(DB::raw('DAY(journal_date)'),'party_info_id')
+        ->where('account_type_id',4)->whereYear('journal_date',date('Y'))
+        ->orderBy('date')
+        ->whereMonth('journal_date',date('m'))->whereBetween('journal_date',[$startOfWeek, $endOfWeek])->get()
+        ->map(function($expense){
+            $day =  new DateTime($expense->date);
+            return[
+                'total_amount' => $expense->total_amount,
+                'party_name' => PartyInfo::find($expense->party_id)->pi_name,
+                'day' => $day->format('D'),
+            ];
+        });
+
+   $head_due = InvoiceItem::select(
+            DB::raw('SUM(due_amount) as total_amount'),
+            DB::raw('MAX(account_head_id) as head_id'),
+            DB::raw('MAX(date) as date'),
+        )->groupBy(DB::raw('DAY(date)'),'account_head_id')
+        ->where('due_amount','>',0)->whereYear('date',date('Y'))
+        ->orderBy('date')
+        ->whereMonth('date',date('m'))->whereBetween('date',[$startOfWeek, $endOfWeek])->get()
+        ->map(function($expense){
+            $day =  new DateTime($expense->date);
+            return[
+                'total_amount' => $expense->total_amount,
+                'head_name' => AccountHead::find($expense->head_id)->fld_ac_head,
+                'day' => $day->format('D'),
+            ];
+        });

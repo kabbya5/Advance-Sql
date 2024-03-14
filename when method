@@ -1,0 +1,9 @@
+$student_admission = Admission::where('student_id', $student_id)->where('education_year', date('Y'))->where('status', 1)->first();
+        $subject_details = SubjectDetail::where('student_class_id', $student_admission->student_class_id)->with('subject')->get();
+        $assignments = Assignment::when($student_admission->student_class_id , function ($query) use($student_admission){
+            $query->where('class_id', $student_admission->student_class_id );
+        })->when($student_admission->section_id , function ($query) use($student_admission){
+            $query->where('section_id', $student_admission->section_id );
+        })->when($request->subject_id_1 , function ($query) use($request){
+            $query->where('subject_id', $request->subject_id_1 );
+        })->orderBy('id','desc')->get();

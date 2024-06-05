@@ -1,0 +1,3 @@
+$products = $offer->items->map(function($item){
+    return $item->item_name;  //one to one many relation
+});

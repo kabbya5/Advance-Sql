@@ -1,0 +1,5 @@
+$users = User::join('sales', 'users.id', '=', 'sales.user_id')
+            ->select('users.*', DB::raw('MAX(orders.id) as order_id'))
+            ->groupBy('users.id')
+            ->orderBy('order_id', 'asc')
+            ->get();

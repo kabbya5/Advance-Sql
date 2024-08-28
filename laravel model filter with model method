@@ -1,0 +1,4 @@
+$top_selling_products = Product::orderBy('view_count','desc')
+->filter(function($product){
+    return $product->checkStock() > 0;
+})->limit(36)->get();

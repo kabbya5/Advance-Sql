@@ -1,0 +1,63 @@
+1. Define the Relationships in the Models
+First, ensure that you have defined the necessary relationships in your Category and Subcategory models.
+
+Category Model:
+
+php
+Copy code
+use Illuminate\Database\Eloquent\Model;
+
+class Category extends Model
+{
+    public function subcategories()
+    {
+        return $this->belongsToMany(Subcategory::class, 'category_subcategories');
+    }
+}
+Subcategory Model:
+
+php
+Copy code
+use Illuminate\Database\Eloquent\Model;
+
+class Subcategory extends Model
+{
+    public function categories()
+    {
+        return $this->belongsToMany(Category::class, 'category_subcategories');
+    }
+}
+2. Query Subcategories Based on Category IDs
+Now, you can query the subcategories based on one or more category IDs.
+
+Example 1: Retrieve Subcategories for a Single Category ID
+php
+Copy code
+$categoryId = 1; // Example category ID
+
+$subcategories = Category::find($categoryId)->subcategories()->get();
+Example 2: Retrieve Subcategories for Multiple Category IDs
+If you have multiple category IDs and want to retrieve all related subcategories:
+
+php
+Copy code
+$categoryIds = [1, 2, 3]; // Example category IDs
+
+$subcategories = Subcategory::whereHas('categories', function($query) use ($categoryIds) {
+    $query->whereIn('categories.id', $categoryIds);
+})->get();
+3. Handling the Query Result
+The result will be a collection of subcategories that are related to the specified category IDs. You can iterate over this collection or further manipulate it as needed.
+
+4. Optimizing with Eager Loading (Optional)
+If you want to optimize the query and avoid the N+1 query problem, you can use eager loading:
+
+php
+Copy code
+$categoryIds = [1, 2, 3];
+
+$subcategories = Subcategory::with('categories')
+    ->whereHas('categories', function($query) use ($categoryIds) {
+        $query->whereIn('categories.id', $categoryIds);
+    })->get();
+This approach allows you to efficiently load the categories associated with each subcategory in one query.

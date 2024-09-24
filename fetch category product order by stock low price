@@ -1,0 +1,18 @@
+$products = $category->products()
+            ->leftJoin('product_stocks', 'bouquets.id', '=', 'product_stocks.product_id')
+            ->select(
+                'bouquets.id as bouquet_id',
+                'bouquets.name as bouquet_name',
+                'bouquets.unit_price as bouquet_unit_price',
+                'category_product.category_id', 
+                DB::raw('MAX(product_stocks.stock_quantity) as max_stock_quantity')
+            )
+            ->groupBy(
+                'bouquets.id',
+                'bouquets.name',
+                'bouquets.unit_price',
+                'category_product.category_id' 
+            )
+            ->orderByRaw('CASE WHEN max_stock_quantity > 0 THEN 1 ELSE 0 END DESC')
+            ->orderBy('bouquets.unit_price', 'asc')
+            ->paginate(24);

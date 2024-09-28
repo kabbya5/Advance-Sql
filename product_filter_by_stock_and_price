@@ -1,0 +1,27 @@
+$products = Bouquet::with('images')
+        ->leftJoin('category_product', 'bouquets.id', '=', 'category_product.product_id')
+        ->leftJoin('categories', 'category_product.category_id', '=', 'categories.id')
+        ->leftJoin('product_stocks', 'bouquets.id', '=', 'product_stocks.product_id')
+        ->select(
+            'bouquets.*',
+            DB::raw('SUM(CASE WHEN product_stocks.product_id = bouquets.id THEN product_stocks.stock_quantity ELSE 0 END) as max_stock_quantity')
+        )
+        ->groupBy(
+            'bouquets.id',
+            'bouquets.name',
+            'bouquets.unit_price',
+            'bouquets.slider_id',
+            'bouquets.code',
+            'bouquets.brand_id',
+            'bouquets.discount_type',
+            'bouquets.view_count',
+            'bouquets.discount',
+            'bouquets.created_at',
+            'bouquets.updated_at',
+            'bouquets.slug',
+            'bouquets.pre_order',
+            'bouquets.pre_order_amount'
+        )
+        ->orderByRaw('SUM(CASE WHEN product_stocks.product_id = bouquets.id THEN product_stocks.stock_quantity ELSE 0 END) > 0 DESC')
+        ->orderBy('bouquets.unit_price', 'asc')
+        ->paginate(24);

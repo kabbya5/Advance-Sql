@@ -1,0 +1,28 @@
+$value = $request->value;
+        $date =  $request->date ? change_date_format($request->date) : null;
+        $mode = $request->mode;
+        $party = $request->party;
+
+        $sql =  "SELECT * FROM receipts WHERE name IS NULL";
+        $bindings = [];
+        if (!is_null($value)) {
+            $sql .= " AND receipt_no LIKE :value";
+            $bindings['value'] = "%$value%";
+        }
+
+        if (!is_null($date)) {
+            $sql .= " AND date = :date";
+            $bindings['date'] = $date;
+        }
+
+        if (!is_null($mode)) {
+            $sql .= " AND pay_mode = :mode";
+            $bindings['mode'] = $mode;
+        }
+
+        if (!is_null($party)) {
+            $sql .= " AND name LIKE :party";
+            $bindings['party'] = "%$party%";
+        }
+
+        $receipt_list = DB::select($sql, $bindings);

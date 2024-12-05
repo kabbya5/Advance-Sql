@@ -1,0 +1,52 @@
+$value = $request->value;
+        $date = $request->date ? $this->dateFormat($request->date) : null;
+        $party = $request->party;
+        $project_id = $request->project_id;
+
+        $sql = "
+                SELECT
+                    p.id,
+                    p.date,
+                    p.purchase_no,
+                    p.invoice_no,
+                    p.total_amount,
+                    pi.pi_name,
+                    GROUP_CONCAT(jb.project_name ORDER BY jb.id SEPARATOR ', ') AS project_name
+                FROM
+                    purchase_expenses AS p
+                JOIN
+                    party_infos AS pi ON pi.id = p.party_id
+                LEFT JOIN
+                    bill_distributes AS bi ON bi.bill_id = p.id
+                LEFT JOIN
+                    job_projects AS jb ON jb.id = bi.project_id
+                WHERE 1
+            ";
+
+            $params = [];
+
+            if ($value) {
+                $sql .= " AND p.purchase_no LIKE :value";
+                $params['value'] = "%$value%";
+            }
+
+            if ($date) {
+                $sql .= " AND p.date = :date";
+                $params['date'] = $date;
+            }
+
+            if ($party) {
+                $sql .= " AND pi.id = :party";
+                $params['party'] = $party;
+            }
+
+            if ($project_id) {
+                $sql .= " AND jb.id = :project_id";
+                $params['project_id'] = $project_id;
+            }
+            $sql .= "
+                GROUP BY
+                    p.id, pi.pi_name
+            ";
+
+        $expenses = DB::select(DB::raw($sql), $params);

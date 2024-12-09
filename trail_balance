@@ -1,0 +1,26 @@
+ $sql = "
+            SELECT
+                ah.id AS account_head_id,  -- ah is AccountHead
+                ah.fld_ac_head,           -- AccountHead name
+
+                SUM(CASE WHEN jr.transaction_type = 'DR' THEN jr.total_amount ELSE 0 END) AS total_dr_amount,
+                SUM(CASE WHEN jr.transaction_type = 'CR' THEN jr.total_amount ELSE 0 END) AS total_cr_amount,
+
+                SUM(CASE
+                    WHEN jr.journal_date < :from_date1 AND jr.transaction_type = 'DR' THEN jr.total_amount ELSE 0 END) AS opening_dr_balance,
+                SUM(CASE
+                    WHEN jr.journal_date < :from_date2 AND jr.transaction_type = 'CR' THEN jr.total_amount ELSE 0 END) AS opening_cr_balance,
+
+                SUM(CASE
+                    WHEN jr.journal_date <= :to_date1 AND jr.transaction_type = 'DR' THEN jr.total_amount ELSE 0 END) AS closing_dr_balance,
+                SUM(CASE
+                    WHEN jr.journal_date <= :to_date2 AND jr.transaction_type = 'CR' THEN jr.total_amount ELSE 0 END) AS closing_cr_balance
+
+            FROM
+                account_heads AS ah  -- AccountHead table is the base
+            LEFT JOIN
+                journal_records AS jr ON ah.id = jr.account_head_id
+                AND jr.journal_date BETWEEN :from_date3 AND :to_date3  -- Apply the date filter here for `journal_records`
+            GROUP BY
+                ah.id, ah.fld_ac_head;
+        ";

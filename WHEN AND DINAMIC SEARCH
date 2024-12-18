@@ -1,0 +1,46 @@
+$sql = "
+            SELECT
+                jr.id,
+                jr.amount,
+                jr.transaction_type,
+                jr.journal_date,
+                ah.fld_ac_head,
+                jr.journal_id,
+
+            CASE
+                WHEN jpi.invoice_no IS NOT NULL THEN jpi.invoice_no
+                WHEN pe.purchase_no IS NOT NULL THEN pe.purchase_no
+                WHEN p.payment_no IS NOT NULL THEN p.payment_no
+                WHEN r.receipt_no IS NOT NULL THEN r.receipt_no
+                ELSE 'NO Narration Available'
+            END AS naration
+
+            FROM journal_records as jr
+
+            LEFT JOIN account_heads as ah on ah.id = jr.account_head_id
+            LEFT JOIN journals as j ON j.id = jr.journal_id
+            LEFT JOIN purchase_expenses as pe ON pe.id = j.purchase_expense_id
+            LEFT JOIN payments as p ON p.id  = j.payment_id
+            LEFT JOIN receipts as r ON r.id = j.receipt_id
+            LEFT JOIN job_project_invoices as jpi ON jpi.id = j.invoice_id
+
+            WHERE jr.account_head_id = :head_id
+            AND MONTH(jr.journal_date) = :month_number
+            AND (
+                (:from_date IS NOT NULL AND :to_date IS NOT NULL AND jr.journal_date BETWEEN :from_date3 AND :to_date3)
+                OR (:from_date1 IS NOT NULL AND :to_date1 IS NULL AND jr.journal_date = :from_date4)
+                OR (:from_date2 IS NULL AND :to_date2 IS NOT NULL AND jr.journal_date = :to_date4)
+                OR (:from_date5 IS NULL AND :to_date5 IS NULL)
+            )
+            AND (:year1 IS NULL OR YEAR(jr.journal_date) = :year2)
+            AND (
+                :search_query IS NULL OR (
+                    jpi.invoice_no LIKE CONCAT('%', :search_query1, '%') OR
+                    r.receipt_no LIKE CONCAT('%', :search_query2, '%') OR
+                    p.payment_no LIKE CONCAT('%', :search_query3, '%') OR
+                    pe.purchase_no LIKE CONCAT('%', :search_query4, '%') OR
+                    j.journal_no LIKE CONCAT('%', :search_query5, '%')
+                )
+            )
+            ORDER BY $column $direction
+        ";

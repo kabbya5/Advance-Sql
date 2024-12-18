@@ -1,0 +1,72 @@
+$from_date = $request->from_date ? $this->dateFormat($request->from_date) : null;
+        $to_date = $request->to_date ? $this->dateFormat($request->to_date) : null;
+        $year_search = $request->year;
+        $month_search = $request->month;
+        $search_query = $request->search_query;
+        $order_by = $request->order_by ?? 'invoice_no-ASC';
+        if($order_by){
+            list($column, $direction) = explode('-',$order_by);
+        }
+
+        $page = $request->input('page', 1);
+        $perPage = 1000;
+
+        $sql = "
+            SELECT
+                jpi.date,
+                jpi.id,
+                jpi.invoice_no,
+                jpi.invoice_type,
+                pi.pi_name,
+                jpi.total_budget
+            FROM job_project_invoices as jpi
+            JOIN party_infos as pi ON pi.id = jpi.customer_id
+            WHERE 1 = 1
+        ";
+
+        $bindings = [];
+
+        if ($search_query) {
+            $bindings['search_query'] = '%' . $search_query . '%';
+            $sql .= " AND jpi.invoice_no LIKE :search_query";
+        }
+
+        if($from_date && $to_date){
+            $sql .= " AND jpi.date BETWEEN :from_date AND :to_date";
+            $bindings['from_date'] = $from_date;
+            $bindings['to_date'] = $to_date;
+        }elseif($from_date){
+            $sql .= " AND jpi.date = :from_date ";
+            $bindings['from_date'] = $from_date;
+
+        }elseif($to_date){
+            $sql .= " AND jpi.date = :to_date";
+            $bindings['to_date'] = $to_date;
+        }
+
+        if($year_search){
+            $sql .= " AND YEAR(jpi.date) = :year";
+            $bindings['year']  = $year_search;
+        }
+
+        if ($month_search) {
+            $sql .= " AND MONTH(jpi.date) = :month";
+            $bindings['month'] = $month_search;
+        }
+        $sql .= " ORDER BY jpi.$column $direction";
+        $totalRecords = DB::select($sql, $bindings);
+        $totalRecords = count($totalRecords);
+        $offset = ($page - 1) * $perPage;
+        $sql .= " LIMIT :limit OFFSET :offset";
+        $bindings['limit'] = $perPage;
+        $bindings['offset'] = $offset;
+
+        $taxInvoces = DB::select($sql, $bindings);
+
+        $paginatedResults = new LengthAwarePaginator(
+            $taxInvoces,
+            $totalRecords,
+            $perPage,
+            $page,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );

@@ -1,0 +1,12 @@
+$topEmployees = Employee::whereNotIn('id', function ($query) use ($date) {
+            $query->select('child_id')
+                ->from('reporting_authorities')
+                ->whereDate('work_date', $date);
+        })->whereIn('id', function($query) use($date){
+            $query->select('parent_id')
+            ->from('reporting_authorities')
+            ->whereDate('work_date', $date);
+        })
+        ->with(['recursiveSubordinates' => function ($query) use ($date) {
+            $query->wherePivot('work_date', $date);
+        }])->get();
